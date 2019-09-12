@@ -10,10 +10,19 @@
             $this->con = $db->connect(); 
         }
 
-        public function createUser($email, $password, $name, $school){
+        /* 
+        endpoint: createuser and userlogin
+        parameters: email, password, name, school
+        method: POST
+        */
+        // public function createUser($name, $email, $password,  $school){
+        public function createUser($name, $email, $password){
            if(!$this->isEmailExist($email)){
-                $stmt = $this->con->prepare("INSERT INTO users (email, password, name, school) VALUES (?, ?, ?, ?)");
-                $stmt->bind_param("ssss", $email, $password, $name, $school);
+                // $stmt = $this->con->prepare("INSERT INTO users (email, password, name, school) VALUES (?, ?, ?, ?)");
+                // $stmt = $this->con->prepare("INSERT INTO users (  name, email, password, school) VALUES (?, ?, ?, ?)");
+                $stmt = $this->con->prepare("INSERT INTO users (  name, email, password) VALUES (?, ?, ?)");
+                // $stmt->bind_param("ssss", $name, $email, $password,  $school);
+                $stmt->bind_param("sss", $name, $email, $password);
                 if($stmt->execute()){
                     return USER_CREATED; 
                 }else{
@@ -36,6 +45,7 @@
             }
         }
 
+    
         private function getUsersPasswordByEmail($email){
             $stmt = $this->con->prepare("SELECT password FROM users WHERE email = ?");
             $stmt->bind_param("s", $email);
@@ -45,39 +55,73 @@
             return $password; 
         }
 
-        public function getAllUsers(){
-            $stmt = $this->con->prepare("SELECT id, email, name, school FROM users;");
+        public function getUserByEmail($email){
+            // $stmt = $this->con->prepare("SELECT id, name, email, school, created_at, updated_at FROM users WHERE email = ?");
+            $stmt = $this->con->prepare("SELECT id, name, email FROM users WHERE email = ?");
+            $stmt->bind_param("s", $email);
             $stmt->execute(); 
-            $stmt->bind_result($id, $email, $name, $school);
+            // $stmt->bind_result($id, $name, $email,  $school, $created_at, $updated_at);
+            $stmt->bind_result($id, $name, $email);
+            $stmt->fetch(); 
+            $user = array(); 
+            $user['id'] = $id; 
+            $user['name'] = $name; 
+            $user['email']=$email;             
+            // $user['school'] = $school; 
+            // $user['created_at'] = $created_at; 
+            // $user['updated_at'] = $updated_at; 
+            return $user; 
+        }
+
+        public function getAllQuotes(){
+            $stmt = $this->con->prepare("SELECT id, quote, author, thumbnail, created_at, updated_at FROM quotes nolock;");
+            $stmt->execute(); 
+            $stmt->bind_result($id, $q, $author,  $thumbnail, $created_at, $updated_at);
+            $quotes = array(); 
+            while($stmt->fetch()){ 
+                $quote = array(); 
+                $quote['id'] = $id; 
+                $quote['quote'] = $q; 
+                $quote['author']=$author;                 
+                $quote['thumbnail'] = $thumbnail; 
+                $quote['created_at'] = $created_at; 
+                $quote['updated_at'] = $updated_at; 
+                array_push($quotes, $quote);
+            }             
+            return $quotes; 
+        }
+                   
+        /* 
+        endpoint: createuser, userlogin and quotes
+        parameters: email, password, name, school
+        method: GET
+        */
+
+        public function getAllUsers(){
+            $stmt = $this->con->prepare("SELECT id, name, email, school FROM users nolock;");
+            $stmt->execute(); 
+            $stmt->bind_result($id, $name, $email,  $school);
             $users = array(); 
             while($stmt->fetch()){ 
                 $user = array(); 
                 $user['id'] = $id; 
-                $user['email']=$email; 
                 $user['name'] = $name; 
+                $user['email']=$email;                 
                 $user['school'] = $school; 
                 array_push($users, $user);
             }             
             return $users; 
-        }
+        }         
 
-        public function getUserByEmail($email){
-            $stmt = $this->con->prepare("SELECT id, email, name, school FROM users WHERE email = ?");
-            $stmt->bind_param("s", $email);
-            $stmt->execute(); 
-            $stmt->bind_result($id, $email, $name, $school);
-            $stmt->fetch(); 
-            $user = array(); 
-            $user['id'] = $id; 
-            $user['email']=$email; 
-            $user['name'] = $name; 
-            $user['school'] = $school; 
-            return $user; 
-        }
+        /* 
+        endpoint: createuser, userlogin and quotes
+        parameters: email, password, name, school
+        method: PUT
+        */
 
-        public function updateUser($email, $name, $school, $id){
-            $stmt = $this->con->prepare("UPDATE users SET email = ?, name = ?, school = ? WHERE id = ?");
-            $stmt->bind_param("sssi", $email, $name, $school, $id);
+        public function updateUser( $name, $email,  $school, $id){
+            $stmt = $this->con->prepare("UPDATE users SET name = ?,  email = ?, school = ? WHERE id = ?");
+            $stmt->bind_param("sssi", $name, $email, $school, $id);
             if($stmt->execute())
                 return true; 
             return false; 
@@ -101,6 +145,11 @@
             }
         }
 
+        /* 
+        endpoint: createuser, userlogin and quotes
+        parameters: email, password, name, school
+        method: DELETE
+        */
         public function deleteUser($id){
             $stmt = $this->con->prepare("DELETE FROM users WHERE id = ?");
             $stmt->bind_param("i", $id);

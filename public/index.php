@@ -14,34 +14,39 @@ $app = new \Slim\App([
     ]
 ]);
 
-$app->add(new Tuupola\Middleware\HttpBasicAuthentication([
-    "secure"=>false,
-    "users" => [
-        "belalkhan" => "123456",
-    ]
-]));
+//this code is given me a hard time. http/1.1 code=401 message=Unauthorized
+// $app->add(new Tuupola\Middleware\HttpBasicAuthentication([
+//     "secure"=>false,
+//     "users" => [
+//         "brooklyn" => "123456",
+//     ]
+// ]));
 
 /* 
-    endpoint: createuser
+    endpoint: createuser and userlogin
     parameters: email, password, name, school
     method: POST
 */
+// $app->map(['GET', 'POST'], '/createuser', function(Request $request, Response $response){
 $app->post('/createuser', function(Request $request, Response $response){
 
-    if(!haveEmptyParameters(array('email', 'password', 'name', 'school'), $request, $response)){
+    // if(!haveEmptyParameters(array( 'name', 'email', 'password', 'school'), $request, $response)){
+        if(!haveEmptyParameters(array( 'name', 'email', 'password'), $request, $response)){
+
 
         $request_data = $request->getParsedBody(); 
 
+        $name = $request_data['name'];
         $email = $request_data['email'];
         $password = $request_data['password'];
-        $name = $request_data['name'];
-        $school = $request_data['school']; 
+        //$school = $request_data['school']; 
 
         $hash_password = password_hash($password, PASSWORD_DEFAULT);
 
         $db = new DbOperations; 
 
-        $result = $db->createUser($email, $hash_password, $name, $school);
+        // $result = $db->createUser( $name, $email, $hash_password , $school);
+        $result = $db->createUser( $name, $email, $hash_password);
         
         if($result == USER_CREATED){
 
@@ -52,7 +57,7 @@ $app->post('/createuser', function(Request $request, Response $response){
             $response->write(json_encode($message));
 
             return $response
-                        ->withHeader('Content-type', 'application/json')
+                        ->withHeader('Content-type', 'application/json')                    
                         ->withStatus(201);
 
         }else if($result == USER_FAILURE){
@@ -84,6 +89,7 @@ $app->post('/createuser', function(Request $request, Response $response){
         ->withStatus(422);    
 });
 
+// $app->map(['GET', 'POST'], '/userlogin', function(Request $request, Response $response){
 $app->post('/userlogin', function(Request $request, Response $response){
 
     if(!haveEmptyParameters(array('email', 'password'), $request, $response)){
@@ -142,6 +148,11 @@ $app->post('/userlogin', function(Request $request, Response $response){
         ->withStatus(422);    
 });
 
+/* 
+    endpoint: /allusers and /hello/{name}
+    parameters: email, password, name, school
+    method: get
+*/
 $app->get('/allusers', function(Request $request, Response $response){
 
     $db = new DbOperations; 
@@ -161,22 +172,52 @@ $app->get('/allusers', function(Request $request, Response $response){
 
 });
 
+$app->get('/hello/{name}', function (Request $request, Response $response, array $args) {
+    $name = $args['name'];
+    $response->getBody()->write("Hello, $name");
+    return $response;
+});
 
+
+$app->get('/quotes', function(Request $request, Response $response){
+
+    $db = new DbOperations; 
+
+    $quotes = $db->getAllQuotes();
+
+    $response_data = array();
+
+    $response_data['error'] = false; 
+    $response_data['quotes'] = $quotes; 
+
+    $response->write(json_encode($response_data));
+
+    return $response
+    ->withHeader('Content-type', 'application/json')
+    ->withStatus(200);  
+
+});
+
+/* 
+    endpoint: /updateuser/{id} and /updatepassword
+    parameters: email, password, name, school
+    method: put
+*/
 $app->put('/updateuser/{id}', function(Request $request, Response $response, array $args){
 
     $id = $args['id'];
 
-    if(!haveEmptyParameters(array('email','name','school'), $request, $response)){
+    if(!haveEmptyParameters(array( 'name', 'email', 'school'), $request, $response)){
+
 
         $request_data = $request->getParsedBody(); 
-        $email = $request_data['email'];
         $name = $request_data['name'];
+        $email = $request_data['email'];        
         $school = $request_data['school']; 
-     
 
         $db = new DbOperations; 
 
-        if($db->updateUser($email, $name, $school, $id)){
+        if($db->updateUser(  $name, $email, $school, $id)){
             $response_data = array(); 
             $response_data['error'] = false; 
             $response_data['message'] = 'User Updated Successfully';
@@ -214,10 +255,10 @@ $app->put('/updateuser/{id}', function(Request $request, Response $response, arr
 
 $app->put('/updatepassword', function(Request $request, Response $response){
 
-    if(!haveEmptyParameters(array('currentpassword', 'newpassword', 'email'), $request, $response)){
+    if(!haveEmptyParameters(array( 'currentpassword', 'newpassword',  'email'), $request, $response)){
         
         $request_data = $request->getParsedBody(); 
-
+        
         $currentpassword = $request_data['currentpassword'];
         $newpassword = $request_data['newpassword'];
         $email = $request_data['email']; 
@@ -256,6 +297,11 @@ $app->put('/updatepassword', function(Request $request, Response $response){
         ->withStatus(422);  
 });
 
+/* 
+    endpoint: /updateuser/{id} and /updatepassword
+    parameters: email, password, name, school
+    method: delete
+*/
 $app->delete('/deleteuser/{id}', function(Request $request, Response $response, array $args){
     $id = $args['id'];
 
